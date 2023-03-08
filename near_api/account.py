@@ -34,12 +34,16 @@ class Account(object):
         self._access_key: dict = provider.get_access_key(self._account_id, self._signer.key_pair.encoded_public_key())
         # print(account_id, self._account, self._access_key)
 
+    def updateNonce(self):
+        self._access_key = self._provider.get_access_key(self._account_id, self._signer._key_pair.encoded_public_key())
+
     def _sign_and_submit_tx(self, receiver_id: str, actions: List['transactions.Action']) -> dict:
-        self._access_key['nonce'] += 1
+        self.updateNonce()
+        # self._access_key["nonce"] += 1
         block_hash = self._provider.get_status()['sync_info']['latest_block_hash']
         block_hash = base58.b58decode(block_hash.encode('utf8'))
         serialized_tx = transactions.sign_and_serialize_transaction(
-            receiver_id, self._access_key['nonce'], actions, block_hash, self._signer)
+            receiver_id, self._access_key['nonce']+1, actions, block_hash, self._signer)
         result: dict = self._provider.send_tx_and_wait(serialized_tx, 10)
         for outcome in itertools.chain([result['transaction_outcome']], result['receipts_outcome']):
             for log in outcome['outcome']['logs']:
